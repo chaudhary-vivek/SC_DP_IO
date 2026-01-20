@@ -1,4 +1,3 @@
-# demand_model.py
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -6,16 +5,16 @@ from sklearn.model_selection import train_test_split
 
 class DemandModel:
     """
-    Bare-bones demand forecasting model.
-    Trains a separate linear model per store.
+    Trains a separate demand model per store
     """
 
     def __init__(self):
         self.models = {}
 
-    def fit(self, df: pd.DataFrame):
+
+    def fit(self, df:pd.DataFrame):
         """
-        Train one model per store.
+        Train one model per store
         """
         for store_id, store_df in df.groupby("store_id"):
             X = store_df[["day", "promo_flag"]]
@@ -26,17 +25,19 @@ class DemandModel:
 
             self.models[store_id] = model
 
-    def predict(self, df: pd.DataFrame) -> pd.DataFrame:
+
+    def predict(self, df:pd.DataFrame) -> pd.DataFrame:
         """
-        Predict demand for each store.
+        Predict demand for each store
         """
+
         predictions = []
 
         for store_id, store_df in df.groupby("store_id"):
             model = self.models.get(store_id)
             if model is None:
                 raise ValueError(f"No model found for store {store_id}")
-
+            
             X = store_df[["day", "promo_flag"]]
             y_pred = model.predict(X)
 
@@ -44,16 +45,17 @@ class DemandModel:
             tmp["predicted_demand"] = np.maximum(0, y_pred.round().astype(int))
             predictions.append(tmp)
 
-        return pd.concat(predictions, ignore_index=True)
+        return pd.concat(predictions, ignore_index = True)
 
 
 # ------------------------
 # BASIC USAGE
 # ------------------------
+
 if __name__ == "__main__":
     df = pd.read_csv("data/demand_history.csv")
 
-    # Train / test split by time
+    # Train/ test split by time
     train_df = df[df["day"] < 150]
     test_df = df[df["day"] >= 150]
 
@@ -62,4 +64,10 @@ if __name__ == "__main__":
 
     preds = model.predict(test_df)
 
-    print(preds[["day", "store_id", "demand", "predicted_demand"]].head())
+    y_true = test_df["demand"].values
+    y_pred = preds["predicted_demand"].values
+
+    mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+    print(f"MAPE: {mape:.2f}%")
+
+
